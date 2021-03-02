@@ -18,8 +18,9 @@ int triangle(int a){
 	int result = 0;
 	if(a == 1)
 		result += 1;
-	else
+	else{
 		result += a + triangle(a - 1);
+	}
 
 	return result;
 }
@@ -48,9 +49,10 @@ void printTriangle(int a){
 }
 
 int main(int argc, char const *argv[]){
-
-	const int a = 23464;
-	printf("Сумма разрядов числа %d равна: %d\n", a,  sumDigit(a));
-	printPyramid(5);
+	const int a = 9;
+	printf("%5d\n", triangle(a));
+	printPyramid(a);
+	printTriangle(triangle(a));
+	printf("\n");
 	return 0;
 }
