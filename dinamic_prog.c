@@ -10,6 +10,7 @@
 #define HEIGHT 8
 #define WIDTH 8
 #define QUEENS 8
+#define KNIGHTS HEIGHT * WIDTH - 1
 
 int board[HEIGHT][WIDTH];
 
@@ -74,10 +75,36 @@ int queens(int queensNumber){
 	return 0;
 }
 
+int poss[][2] = {
+	{-2, 1}, {-1, 2}, {1, 2}, {2, 1}, 
+	{2, -1}, { 1, -2}, {-1, -2}, {-2, -1}
+};
+
+int isPoss(int x, int y){
+	return x > 0 && x < WIDTH && y > 0 && y < HEIGHT && board[y][x] == 0;
+}
+
+int knightMove(int x, int y, int move){
+	int nextX;
+	int nextY;
+	board[y][x] = move;
+	if(move > KNIGHTS)
+		return 1;
+	for (int i = 0; i < 8; ++i){
+		nextX = x + poss[i][1];
+		nextY = y + poss[i][0];
+		if(isPoss(nextX, nextY) && knightMove(nextX, nextY, move + 1))
+			return 1;
+	}
+	board[y][x] = 0;
+	return 0;
+}
+
 int main(int argc, char const *argv[]){
-	
 	boardNull();
 	queens(1);
+	boardPrint();
+	knightMove(1, 0, 1);
 	boardPrint();
 	return 0;
 }
