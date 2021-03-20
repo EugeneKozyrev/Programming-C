@@ -3,8 +3,8 @@
  
 #define T char
 #define SIZE 1000
-#define TRUE 1 == 1
-#define FALSE 1 != 1 
+#define true 1 == 1
+#define false 1 != 1 
  
 typedef int boolean;
 
@@ -16,14 +16,14 @@ int items = 0;
 
 boolean enqueue(T data){
 	if(items == SIZE){
-		return FALSE;
+		return false;
 	}
 	if(last == SIZE - 1){
 		last = -1;
 	}
 	queue[++last] = data;
 	items++;
-	return TRUE;
+	return true;
 }
 
 T dequeue(){
@@ -31,7 +31,7 @@ T dequeue(){
 		return -1;
 	}
 	else{
-		char temp = queue[first++];
+		T temp = queue[first++];
 		first %= SIZE;
 		items--;
 		return temp;
