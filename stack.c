@@ -3,8 +3,8 @@
  
 #define T char
 #define SIZE 1000
-#define TRUE 1 == 1
-#define FALSE 1 != 1 
+#define true 1 == 1
+#define false 1 != 1 
  
 typedef int boolean;
 
@@ -14,10 +14,10 @@ T stack[SIZE];
 boolean push(T data){
 	if(stackPointer < SIZE){
 		stack[++stackPointer] = data;
-		return TRUE;
+		return true;
 	}else{
 		printf("%s\n", "Stack overflow");
-		return FALSE;
+		return false;
 	}
 }
 
