@@ -20,8 +20,8 @@ int main() {
 	SOCKET SrvSock, Conn;
 	WSADATA wsaData;
 
-	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-
+	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);fgfdgfdgfdgewtgwetgre gregfhgefhgdrhn
+g
 	if (iResult < 0) {
 		std::cout << error_msg << "WSAStartup was failed" << '\n';
 		getchar();
