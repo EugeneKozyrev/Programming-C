@@ -2,69 +2,142 @@
 #include <winsock2.h>
 #include <conio.h>
 #include <string>
+#include <vector>
 
 #pragma comment(lib, "Ws2_32.lib")
 
-#define SERVER_PORT 3820
-
-
 int main() {
 
-	std::string error_msg = "Error: ";
-	std::string info_msg = "Info: ";
-	std::string warning_msg = "Warning: ";
+	// Messages
+	const std::string ERR_MSG = "Error: ";
+	const std::string INF_MSG = "Info: ";
+	const std::string WR_MSG = "Warning: ";
 
-	struct sockaddr_in SrvAddr;
-	struct sockaddr_in ConnAddr;
+	// Key constants
+	const char SERVER_ADDR[] = "localhost";			// Enter local Server IP address
+	const int SERVER_PORT = 3820;				// Enter Open working server port
+	const short BUFF_SIZE = 1024;			// Maximum size of buffer for exchange info between server and client
 
-	SOCKET SrvSock, Conn;
+	// Custom addres cannot be used
+	// DWORD ip = inet_addr(SERVER_ADDR); 
+
+	int iResult;
+
 	WSADATA wsaData;
 
-	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 
 	if (iResult < 0) {
-		std::cout << error_msg << "WSAStartup was failed" << '\n';
+		std::cout << ERR_MSG << "WinSock initialization was failed" << '\n';
+		std::cout << ERR_MSG << WSAGetLastError() << '\n';
+		getchar();
+		exit(0);
+	} else
+		std::cout << INF_MSG << "WinSock initialization is OK" << '\n';
+
+
+	SOCKET SrvSock = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (SrvSock == INVALID_SOCKET) {
+		std::cout << ERR_MSG << "WinSock initialization was failed" << '\n';
+		std::cout << ERR_MSG << WSAGetLastError() << '\n'; 
+		closesocket(SrvSock);
+		WSACleanup();
 		getchar();
 		exit(0);
 	}
+	else
+		std::cout << INF_MSG << "Server socket initialization is OK" << '\n';
 
 
-	SrvSock = socket(AF_INET, SOCK_STREAM, 0);
+	struct sockaddr_in SrvAddr;
+	ZeroMemory(&SrvAddr, sizeof(SrvAddr));
 
 	SrvAddr.sin_family = AF_INET;
 	SrvAddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	SrvAddr.sin_port = htons(SERVER_PORT);
 
-	bind(SrvSock, (sockaddr *)&SrvAddr, sizeof SrvAddr); 
+	iResult = bind(SrvSock, (sockaddr *)&SrvAddr, sizeof SrvAddr);
 
-	listen(SrvSock, 5); 
+	if ( iResult != 0 ) {
+		std::cout << ERR_MSG << "Socket binding to server info. Error # " << WSAGetLastError() << '\n';
+		closesocket(SrvSock);
+		WSACleanup();
+		getchar();
+		exit(0);
+	}
+	else 
+		std::cout << INF_MSG << "Binding socket to Server info is OK" << '\n';
 
-	std::cout << info_msg << "...Server is up to state..." << '\n';
+	iResult = listen(SrvSock, 5); 
 
-	int AddrLen = sizeof(ConnAddr); 
-	char buf_in[20];
-	char exit[20] = "Exit";
-	char buf_out[34] = "Hello from server!";
-	int nsize;
-	int bytes = 0;
-	bool stop = false;
-	 
+	if ( iResult != 0 ) {
+		std::cout << ERR_MSG << "Can't start to listen to. Error # " << WSAGetLastError() << '\n';
+		closesocket(SrvSock);
+		WSACleanup();
+		getchar();
+		exit(0);
+	}
+	else 
+		std::cout << " ------- ...Server is up to state... ------- " << '\n';
 
-	while(1) {
-		Conn = accept(SrvSock, (struct sockaddr *) &ConnAddr, &AddrLen);
-		//HOSTENT* hst ;
-		//hst = gethostbyaddr((char *)&ConnAddr. sin_addr.s_addr, 4, AF_INET);
-		//cout<<"Подключился " << inet_ntoa(ConnAddr.sin_addr)<<endl;
+	struct sockaddr_in ConnAddr;
+	ZeroMemory(&ConnAddr, sizeof(ConnAddr));
+	
+	int ConnAddr_size = sizeof(ConnAddr);
 
-		bytes = recv(Conn, (char *)buf_in, sizeof (buf_in), 0);
-		std::cout << buf_in << '\n';
-		send(Conn, (char *) buf_out, sizeof (buf_out) , 0);
+	SOCKET Conn = accept(SrvSock, (struct sockaddr *) &ConnAddr, &ConnAddr_size);;
+
+	if (Conn == INVALID_SOCKET) {
+		std::cout << ERR_MSG << "Client detected, but can't connect to a client. Error # " << WSAGetLastError() << '\n';
+		closesocket(SrvSock);
+		closesocket(Conn);
+		WSACleanup();
+		getchar();
+		exit(0);
+	} else
+		std::cout << INF_MSG << "Connection to a client established successfully" << '\n';
+
+	std::vector<char> servBuff(BUFF_SIZE);
+	std::vector<char> clientBuff(BUFF_SIZE);
+
+	short packet_size = 0;
+
+	while(true) {
+		packet_size = recv(Conn, servBuff.data(), servBuff.size(), 0);
+		std::cout << "Client's message: " << servBuff.data() << '\n';
+
+		std::cout << "Your (host) message: ";
+		fgets(clientBuff.data(), clientBuff.size(), stdin);
+
+		if (clientBuff[0] == 'e' && clientBuff[1] == 'o' && clientBuff[2] == 'l') {
+			shutdown(Conn, SD_BOTH);
+			closesocket(SrvSock);
+			closesocket(Conn);
+			WSACleanup();
+			std::cout << INF_MSG << "Connection disabled" << '\n';
+			getchar();
+			exit(0);
+		}
+
+		packet_size = send(Conn, clientBuff.data(), clientBuff.size(), 0);
+
+		if (packet_size == SOCKET_ERROR) {
+			std::cout << ERR_MSG << "Can't send message to Client. Error # " << WSAGetLastError() << '\n';
+			closesocket(SrvSock);
+			closesocket(Conn);
+			WSACleanup();
+			getchar();
+			exit(0);
+		}
 	}
 
-	shutdown(Conn,2);
+	closesocket(SrvSock);
 	closesocket(Conn);
+	WSACleanup();
 
-	std::cout << '\n' << info_msg <<  "Exit from the server part" << '\n';
-	getch();
+	std::cout << '\n' << INF_MSG <<  "Exit from the server part" << '\n';
+	getchar();
+	
 	return 0;
 }

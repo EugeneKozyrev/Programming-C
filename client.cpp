@@ -1,76 +1,113 @@
 #include <iostream>
 #include <winsock2.h>
 #include <conio.h>
-#include <stdio.h>
 #include <string>
+#include <vector>
 
 #pragma comment(lib, "Ws2_32.lib")
 
-#define  SERVER_PORT 3820
-
-
 int main() {
 
-	std::string error_msg = "Error: ";
-	std::string info_msg = "Info: ";
-	std::string warning_msg = "Warning: ";
+	// Messages
+	const std::string ERR_MSG = "Error: ";
+	const std::string INF_MSG = "Info: ";
+	const std::string WR_MSG = "Warning: ";
 
-	SOCKET ClientSock = INVALID_SOCKET;
-	WSADATA WSStartData;
+	//Key constants
+	const char SERVER_ADDR[] = "localhost";					// Enter IPv4 address of Server
+	const short SERVER_PORT = 3820;				// Enter Listening port on Server side
+	const short BUFF_SIZE = 1024;					// Maximum size of buffer for exchange info between server and client
 
-	char DefaultIPAddr[] = "127.0.0.1";
-
-	struct sockaddr_in Addr;
+	int iResult;
 
 	WSADATA wsaData;
 
-	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 
 	if (iResult < 0) {
-		std::cout << '\n' << error_msg << "WSAStartup was failed" << '\n';
+		std::cout << ERR_MSG << "WinSock initialization was failed" << '\n';
+		std::cout << ERR_MSG << WSAGetLastError() << '\n';
+		getchar();
+		exit(0);
+	} else
+		std::cout << INF_MSG << "WinSock initialization is OK" << '\n';
+
+	SOCKET ClientSock = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (ClientSock == INVALID_SOCKET) {
+		std::cout << ERR_MSG << "WinSock initialization was failed" << '\n';
+		std::cout << ERR_MSG << WSAGetLastError() << '\n'; 
+		closesocket(ClientSock);
+		WSACleanup();
 		getchar();
 		exit(0);
 	}
+	else
+		std::cout << INF_MSG << "Client socket initialization is OK" << '\n';
 
-		
-	ClientSock = socket(AF_INET, SOCK_STREAM, 0);
-	
-	memset(&Addr, 0, sizeof(Addr));
+	struct sockaddr_in Addr;
+	ZeroMemory(&Addr, sizeof(Addr));
 
 	Addr.sin_family = AF_INET;
 	Addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	Addr.sin_port = htons(SERVER_PORT);
 
-	DWORD size = 20;
-	char* localIP;
+	iResult = connect(ClientSock, (struct sockaddr*)&Addr, sizeof(Addr));
 
-	int u = connect(ClientSock, (struct sockaddr*)&Addr, sizeof(Addr));
-
-	if (u == INVALID_SOCKET) {
-		std::cout << error_msg << "Unable connect to remote server" << '\n';    
+	if (iResult == INVALID_SOCKET) {
+		std::cout << ERR_MSG << "Unable connect to remote server" << '\n';    
 		getchar();	
-		return 0;
-	} else std::cout << info_msg << "Connection to remote server was successfully done" << '\n';
+		exit(0);
+	} else 
+		std::cout << INF_MSG << "Connection to remote server was successfully done" << '\n';
+
 	
-	int bytes = 0;
-	char rez[34] = "";
-	char buf[20] = "Begin";
-	int len;
+	std::vector<char> servBuff(BUFF_SIZE), clientBuff(BUFF_SIZE);							// Buffers for sending and receiving data
+	short packet_size = 0;
 
-	std::cout << "Input: ";
-	gets(buf);
-	len = sizeof(buf);
+	while (true) {
 
-	send(ClientSock, (char*)buf, len, 0);
-	bytes = recv(ClientSock, (char*)rez, sizeof(rez), 0);
-	if (bytes == -1) std::cout << warning_msg << "Result received with error" << '\n';
-	else std::cout << rez;
+		std::cout << "Your (Client) message to Server: ";
+		fgets(clientBuff.data(), clientBuff.size(), stdin);
 
+		// Check whether client like to stop chatting 
+		if (clientBuff[0] == 'e' && clientBuff[1] == 'o' && clientBuff[2] == 'l') {
+			shutdown(ClientSock, SD_BOTH);
+			closesocket(ClientSock);
+			WSACleanup();
+			std::cout << INF_MSG << "Connection disabled" << '\n';
+			getchar();	
+			exit(0);
+		}
 
-	shutdown(ClientSock, 2);
+		packet_size = send(ClientSock, clientBuff.data(), clientBuff.size(), 0);
+
+		if (packet_size == SOCKET_ERROR) {
+			std::cout << ERR_MSG << "Can't send message to Server. Error # " << WSAGetLastError() << '\n';
+			closesocket(ClientSock);
+			WSACleanup();
+			getchar();	
+			exit(0);
+		} 
+
+		packet_size = recv(ClientSock, servBuff.data(), servBuff.size(), 0);
+
+		if (packet_size == SOCKET_ERROR) {
+			std::cout << ERR_MSG << "Can't receive message from Server. Error # " << WSAGetLastError() << '\n';
+			closesocket(ClientSock);
+			WSACleanup();
+			getchar();	
+			exit(0);
+		}
+		else
+			std::cout << "Server message: " << servBuff.data() << '\n';
+
+	}
+
 	closesocket(ClientSock);
 	WSACleanup();
 	std::cout << '\n' << "Exit from the client part" << '\n';
 	getchar();
+
 	return 0;
 }
